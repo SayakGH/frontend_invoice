@@ -10,15 +10,14 @@ export default function Navbar() {
     localStorage.clear();
     navigate("/login");
   };
+
   return (
-    <div className="flex items-center justify-between px-4 h-16 border-b bg-white">
+    <div className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b bg-white px-4">
       <MobileSidebar />
 
-      <h2 className="font-semibold text-lg hidden md:block">Dashboard</h2>
-
-      <a onClick={handleLogout}>
+      <button onClick={handleLogout}>
         <LogOut />
-      </a>
+      </button>
     </div>
   );
 }

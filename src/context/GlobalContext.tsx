@@ -8,7 +8,7 @@ type GlobalContextType = {
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export function GlobalProvider({ children }: { children: React.ReactNode }) {
-  const [page, setPage] = useState("invoices");
+  const [page, setPage] = useState("addinvoices");
 
   return (
     <GlobalContext.Provider value={{ page, setPage }}>

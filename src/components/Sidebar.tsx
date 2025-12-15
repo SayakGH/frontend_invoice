@@ -18,13 +18,20 @@ export default function Sidebar() {
           Analytics
         </Button>
       )}
+      <Button
+        variant="ghost"
+        className="w-full justify-start text-gray-300"
+        onClick={() => setPage("addinvoices")}
+      >
+        Add Invoices
+      </Button>
 
       <Button
         variant="ghost"
         className="w-full justify-start text-gray-300"
         onClick={() => setPage("invoices")}
       >
-        Invoices
+        Manage Invoices
       </Button>
       {role === "admin" && (
         <Button
@@ -32,7 +39,7 @@ export default function Sidebar() {
           className="w-full justify-start text-gray-300"
           onClick={() => setPage("manage")}
         >
-          Manage
+          Manage Users
         </Button>
       )}
     </div>

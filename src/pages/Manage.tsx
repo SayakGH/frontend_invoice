@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,7 @@ export default function Manage() {
   };
 
   const filteredEmployees = employees.filter((emp) =>
-    emp.email.toLowerCase().includes(search.toLowerCase())
+    emp.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

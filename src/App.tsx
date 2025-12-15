@@ -17,11 +17,19 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div className="flex h-screen bg-gray-100">
+              <div className="flex h-[100svh] overflow-hidden bg-gray-100">
+                {/* Sidebar */}
                 <Sidebar />
-                <div className="flex flex-col flex-1">
+
+                {/* Right section */}
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  {/* Navbar (fixed height) */}
                   <Navbar />
-                  <Dashboard />
+
+                  {/* Scrollable content */}
+                  <main className="flex-1 overflow-y-auto">
+                    <Dashboard />
+                  </main>
                 </div>
               </div>
             </ProtectedRoute>

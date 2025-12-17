@@ -4,6 +4,7 @@ import Analytics from "./Analytics";
 import Invoices from "./Invoice";
 import Manage from "./Manage";
 import AddInvoice from "./AddInvoice";
+import Payments from "./Payments";
 
 export default function Dashboard() {
   const { page } = useGlobal();
@@ -13,6 +14,7 @@ export default function Dashboard() {
       {page === "analytics" && role === "admin" && <Analytics />}
       {page === "invoices" && role === "admin" && <Invoices />}
       {page === "manage" && role === "admin" && <Manage />}
+      {page === "payments" && role === "admin" && <Payments />}
       {page === "addinvoices" && <AddInvoice />}
     </div>
   );

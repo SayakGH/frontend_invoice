@@ -1,5 +1,7 @@
+import { getAnalytics } from "@/api/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { IAnalyticsResponse } from "@/types/analyticsType";
 import {
   LineChart,
   Line,
@@ -9,11 +11,22 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useState, useEffect } from "react";
 
 export default function Analytics() {
-  const totalInvoices = 152;
-  const totalDue = 2750000;
-  const totalPaid = 1980000;
+  const [totalInvoices, setTotalInvoices] = useState(0);
+  const [totalDue, setTotalDue] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
+
+  useEffect(() => {
+    const fetchdata = async () => {
+      const data: IAnalyticsResponse = await getAnalytics();
+      setTotalInvoices(Number(data.analytics.totalInvoices));
+      setTotalDue(Number(data.analytics.totalDue));
+      setTotalPaid(Number(data.analytics.totalPaid));
+    };
+    fetchdata();
+  }, []);
 
   const paymentsData = [
     { date: "Aug 01", amount: 12000 },

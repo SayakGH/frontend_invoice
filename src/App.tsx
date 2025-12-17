@@ -4,15 +4,27 @@ import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import InvoiceRoute from "./pages/InvoiceRoute"; // 👈 NEW
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login Route */}
+        {/* ================= LOGIN ================= */}
         <Route path="/login" element={<Login />} />
 
-        {/* Dashboard Route (Protected) */}
+        {/* ================= INVOICE PAGE (NO SIDEBAR) ================= */}
+
+        <Route
+          path="/invoice/:invoiceId"
+          element={
+            <ProtectedRoute>
+              <InvoiceRoute />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ================= DASHBOARD ================= */}
         <Route
           path="/dashboard"
           element={
@@ -23,7 +35,7 @@ function App() {
 
                 {/* Right section */}
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  {/* Navbar (fixed height) */}
+                  {/* Navbar */}
                   <Navbar />
 
                   {/* Scrollable content */}
@@ -36,7 +48,7 @@ function App() {
           }
         />
 
-        {/* Redirect everything else to login */}
+        {/* ================= FALLBACK ================= */}
         <Route path="*" element={<Login />} />
       </Routes>
     </BrowserRouter>

@@ -43,6 +43,15 @@ export default function Sidebar() {
           Manage Users
         </Button>
       )}
+      {role === "admin" && (
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-gray-300"
+          onClick={() => setPage("payments")}
+        >
+          Payments
+        </Button>
+      )}
     </div>
   );
 }

@@ -61,6 +61,15 @@ export default function MobileSidebar() {
               Manage Users
             </Button>
           )}
+          {role === "admin" && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => handleSelect("payments")}
+            >
+              Payments
+            </Button>
+          )}
         </div>
       </SheetContent>
     </Sheet>

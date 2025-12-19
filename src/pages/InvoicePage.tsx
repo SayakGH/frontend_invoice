@@ -1,6 +1,8 @@
 import React from "react";
 import type { INVOICE } from "@/types/invoiceType";
-
+import { generateInvoicePDF } from "@/api/invoice";
+import { downloadBlob } from "@/utils/DownloadBlog";
+import { companyLogos } from "@/assets/companyLogos";
 /* ===============================
    Utils
 ================================ */
@@ -51,23 +53,25 @@ const InvoicePage: React.FC<InvoiceProps> = ({ invoice }) => {
     window.print();
   };
 
-  const handleWhatsApp = () => {
-    const message = `
-📄 *Invoice from ${company.name}*
+  const handleWhatsApp = async (invoice: INVOICE) => {
+    try {
+      // 1️⃣ Generate PDF from backend
+      const pdfBlob = await generateInvoicePDF(invoice);
 
-Invoice No: ${_id}
-Date: ${formatDate(createdAt)}
+      // 2️⃣ Download PDF locally
+      downloadBlob(pdfBlob, `Invoice_${invoice._id}.pdf`);
 
-Customer: ${customer.name}
-Total Amount: ${formatCurrency(totalAmount)}
-Advance: ${formatCurrency(advance)}
-Balance Due: ${formatCurrency(remainingAmount)}
-
-Thank you for your business.
-`;
-
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+      // 3️⃣ Open WhatsApp with message
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(
+          "📄 Please find the invoice attached."
+        )}`,
+        "_blank"
+      );
+    } catch (error) {
+      console.error("Invoice PDF generation failed", error);
+      alert("Failed to generate invoice PDF");
+    }
   };
 
   return (
@@ -110,7 +114,15 @@ Thank you for your business.
           {/* HEADER */}
           <div style={styles.row}>
             <div style={styles.company}>
-              <img src="/assets/logo.png" alt="Logo" style={styles.logo} />
+              <img
+                src={
+                  companyLogos[company.name as string] ||
+                  "/assets/default-logo.png"
+                }
+                alt="Company Logo"
+                style={styles.logo}
+              />
+
               <div>
                 <strong>{company.name}</strong>
                 <div>{company.address}</div>
@@ -242,7 +254,10 @@ Thank you for your business.
 
         {/* ================= ACTION BUTTONS ================= */}
         <div className="action-buttons" style={styles.actions}>
-          <button onClick={handleWhatsApp} style={styles.whatsappBtn}>
+          <button
+            onClick={() => handleWhatsApp(invoice)}
+            style={styles.whatsappBtn}
+          >
             Send to WhatsApp
           </button>
 

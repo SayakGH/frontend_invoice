@@ -63,3 +63,17 @@ export const updateInvoice = async (
 
   return res.data;
 };
+
+export const generateInvoicePDF = async (invoice: INVOICE): Promise<Blob> => {
+  const token = localStorage.getItem("authToken");
+  const id = invoice._id;
+
+  const res = await api.get<Blob>(`/invoices/pdf/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    responseType: "blob", // 🔴 REQUIRED for PDFs
+  });
+
+  return res.data;
+};

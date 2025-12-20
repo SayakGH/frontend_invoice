@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import {
   Table,
   TableBody,
@@ -23,6 +24,7 @@ import type {
   INVOICE,
   IGetAllInvoiceResponse,
   IUpdateInvoicePaymentResponse,
+  InvoiceCursorResponse,
 } from "@/types/invoiceType";
 import { getAllInvoices, updateInvoice } from "@/api/invoice";
 import { useNavigate } from "react-router-dom";
@@ -39,6 +41,8 @@ function getTimeHHMMFromISOString(isoString: string) {
 /* ================= COMPONENT ================= */
 export default function Invoices() {
   const navigate = useNavigate();
+  const hasFetched = useRef(false);
+
   const [paymentMode, setPaymentMode] = useState<
     "Bank Transfer" | "Cheque" | "UPI" | "Cash" | "Demand Draft" | "Others"
   >("Bank Transfer");
@@ -55,9 +59,49 @@ export default function Invoices() {
 
   const [invoices, setInvoices] = useState<INVOICE[]>([]);
 
+  // 🔑 NEW
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  /* ================= FETCH ================= */
   const getInvoices = async () => {
-    const data: IGetAllInvoiceResponse = await getAllInvoices();
-    setInvoices(data.invoices);
+    if (!hasMore || loading) return;
+
+    setLoading(true);
+
+    try {
+      const data: InvoiceCursorResponse = await getAllInvoices(20, cursor);
+
+      setInvoices((prev) => [...prev, ...data.invoices]);
+      setCursor(data.nextCursor || null);
+      setHasMore(Boolean(data.nextCursor));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    getInvoices();
+  }, []);
+
+  const filteredInvoices = invoices.filter(
+    (inv) =>
+      inv._id.toLowerCase().includes(search.toLowerCase()) ||
+      inv.customer.name.toLowerCase().includes(search.toLowerCase()) ||
+      inv.customer.phone.includes(search)
+  );
+
+  /* ================= HANDLERS ================= */
+  const handleEditClick = (invoice: INVOICE) => {
+    setSelectedInvoice(invoice);
+    setPayment(null);
+    setPaymentMode("Bank Transfer");
+    setChequeNumber("");
+    setBankName("");
+    setOpen(true);
   };
 
   const updateInvoicePayment = async (
@@ -81,34 +125,15 @@ export default function Invoices() {
       chequeNumber,
       bankName,
     });
-  };
-
-  useEffect(() => {
-    getInvoices();
-  }, []);
-
-  const filteredInvoices = invoices.filter(
-    (inv) =>
-      inv._id.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customer.phone.includes(search)
-  );
-
-  /* ================= HANDLERS ================= */
-  const handleEditClick = (invoice: INVOICE) => {
-    setSelectedInvoice(invoice);
-    setPayment(null);
-    setPaymentMode("Bank Transfer");
-    setChequeNumber("");
-    setBankName("");
-    setOpen(true);
+    return data;
   };
 
   const handleUpdate = async () => {
-    if (!selectedInvoice) return;
+    if (!selectedInvoice || payment === null) return;
 
     try {
       setLoading(true);
+
       if (payment > selectedInvoice.remainingAmount || payment <= 0) {
         throw new Error("Invalid payment amount");
       }
@@ -121,11 +146,15 @@ export default function Invoices() {
         paymentMode === "Cheque" ? chequeNumber : undefined,
         paymentMode === "Cheque" ? bankName : undefined
       );
+
       setOpen(false);
       setSelectedInvoice(null);
       setPayment(null);
 
-      // refresh invoices
+      // 🔁 RESET & REFRESH
+      setInvoices([]);
+      setCursor(null);
+      setHasMore(true);
       getInvoices();
     } catch (err) {
       console.error("Payment update failed", err);
@@ -184,7 +213,6 @@ export default function Invoices() {
                 <TableCell>{getTimeHHMMFromISOString(inv.createdAt)}</TableCell>
                 <TableCell className="flex justify-end gap-3">
                   <Button
-                    type="button"
                     size="sm"
                     variant="outline"
                     onClick={() =>
@@ -205,6 +233,15 @@ export default function Invoices() {
         </Table>
       </div>
 
+      {/* ================= LOAD MORE ================= */}
+      {hasMore && (
+        <div className="hidden md:flex justify-center">
+          <Button onClick={getInvoices} disabled={loading}>
+            {loading ? "Loading..." : "Load More"}
+          </Button>
+        </div>
+      )}
+
       {/* ================= MOBILE VIEW ================= */}
       <div className="space-y-5 md:hidden">
         {filteredInvoices.map((inv) => (
@@ -223,13 +260,10 @@ export default function Invoices() {
               <div className="grid grid-cols-2 gap-y-2 text-sm">
                 <p className="text-muted-foreground">Phone</p>
                 <p>{inv.customer.phone}</p>
-
                 <p className="text-muted-foreground">Total</p>
                 <p>₹{inv.totalAmount}</p>
-
                 <p className="text-muted-foreground">Advance</p>
                 <p>₹{inv.advance}</p>
-
                 <p className="text-muted-foreground">Date</p>
                 <p>
                   {getDateFromISOString(inv.createdAt)}{" "}
@@ -241,7 +275,7 @@ export default function Invoices() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 flex items-center gap-2"
+                  className="flex-1"
                   onClick={() =>
                     navigate(`/invoice/${inv._id}`, {
                       state: { invoice: inv },
@@ -263,9 +297,16 @@ export default function Invoices() {
             </CardContent>
           </Card>
         ))}
+        {hasMore && (
+          <div className="flex justify-center pt-4 md:hidden">
+            <Button onClick={getInvoices} disabled={loading}>
+              {loading ? "Loading..." : "Load More"}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* ================= EDIT MODAL ================= */}
+      {/* ================= EDIT MODAL (UNCHANGED) ================= */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -284,25 +325,16 @@ export default function Invoices() {
                   e.target.value === "" ? null : Number(e.target.value)
                 )
               }
-              placeholder="Enter amount"
             />
           </div>
-          {/* PAYMENT MODE */}
+
           <div className="space-y-2">
             <Label>Payment Mode</Label>
             <select
               className="w-full h-10 rounded-md border px-3 text-sm"
               value={paymentMode}
               onChange={(e) =>
-                setPaymentMode(
-                  e.target.value as
-                    | "Bank Transfer"
-                    | "Cheque"
-                    | "UPI"
-                    | "Cash"
-                    | "Demand Draft"
-                    | "Others"
-                )
+                setPaymentMode(e.target.value as typeof paymentMode)
               }
             >
               <option>Bank Transfer</option>
@@ -313,37 +345,24 @@ export default function Invoices() {
               <option>Others</option>
             </select>
           </div>
+
           {paymentMode === "Cheque" && (
             <div className="space-y-3">
-              <div>
-                <Label>Cheque Number</Label>
-                <Input
-                  value={chequeNumber}
-                  onChange={(e) => setChequeNumber(e.target.value)}
-                  placeholder="Enter cheque number"
-                />
-              </div>
-
-              <div>
-                <Label>Bank Name</Label>
-                <Input
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="Enter bank name"
-                />
-              </div>
+              <Input
+                value={chequeNumber}
+                onChange={(e) => setChequeNumber(e.target.value)}
+                placeholder="Cheque Number"
+              />
+              <Input
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                placeholder="Bank Name"
+              />
             </div>
           )}
 
           <DialogFooter className="pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setOpen(false);
-                setSelectedInvoice(null);
-                setPayment(null);
-              }}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleUpdate} disabled={loading}>

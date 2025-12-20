@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -12,25 +12,45 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import type { IGetPaymentResponse, IPayment } from "@/types/paymentType";
 import { getAllPayments } from "@/api/payments";
+import { Button } from "@/components/ui/button";
 
 /* ================= UTILS ================= */
-
 const getDate = (iso: string) => iso.split("T")[0];
 const getTime = (iso: string) => iso.split("T")[1].slice(0, 5);
 
 /* ================= COMPONENT ================= */
-
 export default function Payments() {
   const [payments, setPayments] = useState<IPayment[]>([]);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  // 🔑 pagination state
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // 🔒 strict-mode guard
+  const hasFetched = useRef(false);
+
   /* ================= FETCH PAYMENTS ================= */
+  const fetchPayments = async () => {
+    if (loading || !hasMore) return;
+
+    setLoading(true);
+
+    const data: IGetPaymentResponse & { nextCursor?: string | null } =
+      await getAllPayments(20, cursor);
+
+    setPayments((prev) => [...prev, ...data.payments]);
+    setCursor(data.nextCursor || null);
+    setHasMore(Boolean(data.nextCursor));
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchPayments = async () => {
-      const data: IGetPaymentResponse = await getAllPayments();
-      setPayments(data.payments);
-    };
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     fetchPayments();
   }, []);
@@ -89,11 +109,8 @@ export default function Payments() {
                   <TableCell className="font-medium break-all -mr-16">
                     {p._id}
                   </TableCell>
-
                   <TableCell>{p.customerName}</TableCell>
-
                   <TableCell>{p.invoiceId}</TableCell>
-
                   <TableCell className="flex items-center gap-2">
                     {p.paymentMode}
                     {p.paymentMode === "Cheque" &&
@@ -103,16 +120,13 @@ export default function Payments() {
                         <ChevronDown className="h-4 w-4" />
                       ))}
                   </TableCell>
-
                   <TableCell className="font-semibold text-green-600">
                     ₹{p.amount.toLocaleString("en-IN")}
                   </TableCell>
-
                   <TableCell>{getDate(p.createdAt)}</TableCell>
                   <TableCell>{getTime(p.createdAt)}</TableCell>
                 </TableRow>
 
-                {/* ================= CHEQUE DETAILS ================= */}
                 {expanded === p._id && p.paymentMode === "Cheque" && (
                   <TableRow className="bg-muted/40">
                     <TableCell colSpan={7} className="text-sm">
@@ -135,6 +149,14 @@ export default function Payments() {
           </p>
         )}
       </div>
+      {/* ================= LOAD MORE (DESKTOP ONLY) ================= */}
+      {hasMore && (
+        <div className="hidden md:flex justify-center">
+          <Button onClick={fetchPayments} disabled={loading}>
+            {loading ? "Loading..." : "Load More"}
+          </Button>
+        </div>
+      )}
 
       {/* ================= MOBILE VIEW ================= */}
       <div className="space-y-4 md:hidden">
@@ -190,6 +212,14 @@ export default function Payments() {
             </CardContent>
           </Card>
         ))}
+        {/* ================= MOBILE LOAD MORE ================= */}
+        {hasMore && (
+          <div className="flex justify-center pt-4 md:hidden">
+            <Button onClick={fetchPayments} disabled={loading}>
+              {loading ? "Loading..." : "Load More"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

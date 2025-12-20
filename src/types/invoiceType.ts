@@ -128,3 +128,10 @@ export interface IUpdateInvoicePaymentResponse {
   message: string;
   invoice: INVOICE;
 }
+
+export interface InvoiceCursorResponse {
+  success: boolean;
+  count: number;
+  invoices: INVOICE[];
+  nextCursor: string | null;
+}

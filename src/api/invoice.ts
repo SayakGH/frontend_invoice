@@ -3,6 +3,7 @@ import type {
   ICreateInvoiceResponse,
   IGetAllInvoiceResponse,
   INVOICE,
+  InvoiceCursorResponse,
   IUpdateInvoicePaymentResponse,
 } from "@/types/invoiceType.ts";
 
@@ -21,10 +22,17 @@ export const createInvoice = async (data: INVOICE) => {
   return res.data;
 };
 
-export const getAllInvoices = async () => {
+export const getAllInvoices = async (
+  limit = 10,
+  cursor?: string | null
+): Promise<InvoiceCursorResponse> => {
   const token = localStorage.getItem("authToken");
 
-  const res = await api.get<IGetAllInvoiceResponse>("/invoices", {
+  const res = await api.get<InvoiceCursorResponse>("/invoices", {
+    params: {
+      limit,
+      cursor,
+    },
     headers: {
       Authorization: `Bearer ${token}`,
     },

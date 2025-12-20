@@ -17,4 +17,5 @@ export interface IPayment {
 
 export interface IGetPaymentResponse {
   payments: IPayment[];
+  nextCursor?: string | null;
 }

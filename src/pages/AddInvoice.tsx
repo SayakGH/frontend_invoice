@@ -17,6 +17,7 @@ import type {
   ICreateInvoiceResponse,
 } from "@/types/invoiceType";
 import { createInvoice } from "@/api/invoice";
+import { toast } from "sonner";
 
 /* ================= TYPES ================= */
 type LineItem = {
@@ -120,8 +121,101 @@ export default function AddInvoice() {
     return response;
   };
 
+  const [loading, setLoading] = useState(false);
+  const resetForm = () => {
+    setCompany("Unique Realcon");
+
+    setCustomer({
+      name: "",
+      phone: "",
+      address: "",
+      PAN: "",
+      GSTIN: "",
+    });
+
+    setItems([
+      {
+        description: "",
+        projectName: "",
+        hashingCode: "",
+        rate: 0,
+        areaSqFt: 0,
+      },
+    ]);
+
+    setParking(0);
+    setAmenities(0);
+    setOtherCharges(0);
+    setGstPercent(18);
+
+    setAdvance(0);
+    setPaymentMode("Bank Transfer");
+    setChequeNumber("");
+    setBankName("");
+  };
+
   const handleSubmit = async () => {
-    const payload = {
+    /* ================= VALIDATION ================= */
+
+    if (!company) {
+      toast.error("Company is required");
+      return;
+    }
+
+    if (
+      !customer.name ||
+      !customer.phone ||
+      !customer.address ||
+      !customer.PAN
+    ) {
+      toast.error("Please fill all mandatory customer details");
+      return;
+    }
+
+    if (customer.phone.length !== 10) {
+      toast.error("Phone number must be exactly 10 digits");
+      return;
+    }
+
+    if (customer.PAN.length !== 10) {
+      toast.error("PAN must be 10 characters");
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error("Please add at least one invoice item");
+      return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (
+        !item.description ||
+        !item.projectName ||
+        !item.hashingCode ||
+        item.rate <= 0 ||
+        item.areaSqFt <= 0
+      ) {
+        toast.error(`Invoice item ${i + 1} is incomplete`);
+        return;
+      }
+    }
+
+    if (paymentMode === "Cheque") {
+      if (!chequeNumber || chequeNumber.length !== 6 || !bankName) {
+        toast.error("Cheque number and bank name are required");
+        return;
+      }
+    }
+
+    if (advance > totalAmount) {
+      toast.error("Advance amount cannot exceed total amount");
+      return;
+    }
+
+    /* ================= PAYLOAD ================= */
+
+    const payload: CreateInvoicePayload = {
       company,
       customer,
       items,
@@ -146,10 +240,21 @@ export default function AddInvoice() {
       remainingAmount,
     };
 
-    const response: ICreateInvoiceResponse = await create(payload);
+    /* ================= API ================= */
 
-    console.log("Invoice Payload:", payload);
-    // TODO: Send to backend
+    try {
+      setLoading(true);
+      await create(payload);
+      setLoading(false);
+
+      toast.success("Invoice created successfully 🎉");
+
+      resetForm();
+    } catch (error: any) {
+      toast.error(
+        error?.message || "Failed to create invoice. Please try again."
+      );
+    }
   };
 
   /* ================= UI ================= */
@@ -185,7 +290,11 @@ export default function AddInvoice() {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Customer Name</Label>
+            <Label className="flex items-center gap-1">
+              Customer Name
+              <span className="text-red-500">*</span>
+            </Label>
+
             <Input
               value={customer.name}
               onChange={(e) =>
@@ -195,17 +304,30 @@ export default function AddInvoice() {
           </div>
 
           <div className="space-y-2">
-            <Label>Phone Number</Label>
+            <Label className="flex items-center gap-1">
+              Phone Number
+              <span className="text-red-500">*</span>
+            </Label>
+
             <Input
               value={customer.phone}
-              onChange={(e) =>
-                setCustomer({ ...customer, phone: e.target.value })
-              }
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+
+                if (value.length <= 10) {
+                  setCustomer({ ...customer, phone: value });
+                }
+              }}
+              placeholder="Enter 10-digit phone number"
             />
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label>Address</Label>
+            <Label className="flex items-center gap-1">
+              Address
+              <span className="text-red-500">*</span>
+            </Label>
+
             <Input
               value={customer.address}
               onChange={(e) =>
@@ -215,12 +337,24 @@ export default function AddInvoice() {
           </div>
 
           <div className="space-y-2">
-            <Label>PAN</Label>
+            <Label className="flex items-center gap-1">
+              PAN
+              <span className="text-red-500">*</span>
+            </Label>
+
             <Input
               value={customer.PAN}
-              onChange={(e) =>
-                setCustomer({ ...customer, PAN: e.target.value })
-              }
+              maxLength={10}
+              onChange={(e) => {
+                const value = e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "");
+
+                if (value.length <= 10) {
+                  setCustomer({ ...customer, PAN: value });
+                }
+              }}
+              placeholder="ABCDE1234F"
             />
           </div>
 
@@ -228,11 +362,20 @@ export default function AddInvoice() {
             <Label>
               GSTIN <span className="text-muted-foreground">(Optional)</span>
             </Label>
+
             <Input
               value={customer.GSTIN}
-              onChange={(e) =>
-                setCustomer({ ...customer, GSTIN: e.target.value })
-              }
+              maxLength={15}
+              onChange={(e) => {
+                const value = e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, ""); // allow only alphanumeric
+
+                if (value.length <= 15) {
+                  setCustomer({ ...customer, GSTIN: value });
+                }
+              }}
+              placeholder="27AAPFU0939F1ZV"
             />
           </div>
         </CardContent>
@@ -252,7 +395,11 @@ export default function AddInvoice() {
             <div key={index} className="space-y-4 border rounded-lg p-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label className="flex items-center gap-1">
+                    Description
+                    <span className="text-red-500">*</span>
+                  </Label>
+
                   <Input
                     value={item.description}
                     onChange={(e) =>
@@ -262,7 +409,11 @@ export default function AddInvoice() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Project Name</Label>
+                  <Label className="flex items-center gap-1">
+                    Project Name
+                    <span className="text-red-500">*</span>
+                  </Label>
+
                   <Input
                     value={item.projectName}
                     onChange={(e) =>
@@ -274,7 +425,11 @@ export default function AddInvoice() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label>HSN Code</Label>
+                  <Label className="flex items-center gap-1">
+                    HSN Code
+                    <span className="text-red-500">*</span>
+                  </Label>
+
                   <Input
                     value={item.hashingCode}
                     onChange={(e) =>
@@ -284,7 +439,11 @@ export default function AddInvoice() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Rate (₹ / sq.ft)</Label>
+                  <Label className="flex items-center gap-1">
+                    Rate (₹ / sq.ft)
+                    <span className="text-red-500">*</span>
+                  </Label>
+
                   <Input
                     type="number"
                     value={item.rate}
@@ -295,7 +454,10 @@ export default function AddInvoice() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Area (sq.ft)</Label>
+                  <Label className="flex items-center gap-1">
+                    Area (sq.ft)
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     type="number"
                     value={item.areaSqFt}
@@ -368,7 +530,10 @@ export default function AddInvoice() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>GST (%)</Label>
+              <Label className="flex items-center gap-1">
+                GST (%)
+                <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="number"
                 value={gstPercent}
@@ -419,7 +584,10 @@ export default function AddInvoice() {
           <Separator />
 
           <div className="space-y-2">
-            <Label>Mode of Payment</Label>
+            <Label className="flex items-center gap-1">
+              Mode of Payment
+              <span className="text-red-500">*</span>
+            </Label>
             <Select
               value={paymentMode}
               onValueChange={(value) =>
@@ -443,15 +611,29 @@ export default function AddInvoice() {
           {paymentMode === "Cheque" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Cheque Number</Label>
+                <Label className="flex items-center gap-1">
+                  Cheque Number
+                  <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={chequeNumber}
-                  onChange={(e) => setChequeNumber(e.target.value)}
+                  maxLength={6}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ""); // digits only
+
+                    if (value.length <= 6) {
+                      setChequeNumber(value);
+                    }
+                  }}
+                  placeholder="Enter 6-digit cheque number"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Bank Name</Label>
+                <Label className="flex items-center gap-1">
+                  Bank Name
+                  <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
@@ -465,7 +647,9 @@ export default function AddInvoice() {
       {/* ================= ACTIONS ================= */}
       <div className="flex justify-end gap-3">
         <Button variant="outline">Cancel</Button>
-        <Button onClick={handleSubmit}>Create Invoice</Button>
+        <Button disabled={loading} onClick={handleSubmit}>
+          {loading ? "Creating..." : "Create Invoice"}
+        </Button>
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash } from "lucide-react";
+import { Download, Plus, Trash } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
 import type {
   CreateInvoicePayload,
   ICreateInvoiceResponse,
+  INVOICE,
 } from "@/types/invoiceType";
 import { createInvoice } from "@/api/invoice";
 import { toast } from "sonner";
@@ -28,8 +30,23 @@ type LineItem = {
   areaSqFt: number;
 };
 
-/* ================= COMPONENT ================= */
 export default function AddInvoice() {
+  const navigate = useNavigate();
+  const [newInvoice, setNewInvoice] = useState<INVOICE | null>(null);
+
+  useEffect(() => {
+    const storedInvoice = localStorage.getItem("CREATED_INVOICE");
+
+    if (storedInvoice) {
+      try {
+        const parsed = JSON.parse(storedInvoice);
+        setNewInvoice(parsed);
+      } catch {
+        localStorage.removeItem("CREATED_INVOICE");
+      }
+    }
+  }, []);
+
   /* ================= STATE ================= */
 
   // Company
@@ -244,7 +261,9 @@ export default function AddInvoice() {
 
     try {
       setLoading(true);
-      await create(payload);
+      const response: ICreateInvoiceResponse = await create(payload);
+      localStorage.setItem("CREATED_INVOICE", JSON.stringify(response.invoice));
+      setNewInvoice(response.invoice);
       setLoading(false);
 
       toast.success("Invoice created successfully 🎉");
@@ -258,399 +277,429 @@ export default function AddInvoice() {
   };
 
   /* ================= UI ================= */
-  return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-20">
-      {/* ================= COMPANY ================= */}
-      <Card>
-        <CardContent className="space-y-2">
-          <Label>Invoice Issuing Company</Label>
-          <Select
-            value={company}
-            onValueChange={(value) => setCompany(value as typeof company)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select company" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Airde Real Estate">
-                Airde Real Estate
-              </SelectItem>
-              <SelectItem value="Airde Developers">Airde Developers</SelectItem>
-              <SelectItem value="Sora Realtors">Sora Realtors</SelectItem>
-              <SelectItem value="Unique Realcon">Unique Realcon</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* ================= CUSTOMER DETAILS ================= */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              Customer Name
-              <span className="text-red-500">*</span>
-            </Label>
-
-            <Input
-              value={customer.name}
-              onChange={(e) =>
-                setCustomer({ ...customer, name: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              Phone Number
-              <span className="text-red-500">*</span>
-            </Label>
-
-            <Input
-              value={customer.phone}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, ""); // remove non-digits
-
-                if (value.length <= 10) {
-                  setCustomer({ ...customer, phone: value });
-                }
-              }}
-              placeholder="Enter 10-digit phone number"
-            />
-          </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <Label className="flex items-center gap-1">
-              Address
-              <span className="text-red-500">*</span>
-            </Label>
-
-            <Input
-              value={customer.address}
-              onChange={(e) =>
-                setCustomer({ ...customer, address: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              PAN
-              <span className="text-red-500">*</span>
-            </Label>
-
-            <Input
-              value={customer.PAN}
-              maxLength={10}
-              onChange={(e) => {
-                const value = e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "");
-
-                if (value.length <= 10) {
-                  setCustomer({ ...customer, PAN: value });
-                }
-              }}
-              placeholder="ABCDE1234F"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              GSTIN <span className="text-muted-foreground">(Optional)</span>
-            </Label>
-
-            <Input
-              value={customer.GSTIN}
-              maxLength={15}
-              onChange={(e) => {
-                const value = e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, ""); // allow only alphanumeric
-
-                if (value.length <= 15) {
-                  setCustomer({ ...customer, GSTIN: value });
-                }
-              }}
-              placeholder="27AAPFU0939F1ZV"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ================= INVOICE ITEMS ================= */}
-      <Card>
-        <CardHeader className="flex justify-between items-center">
-          <CardTitle>Invoice Items</CardTitle>
-          <Button size="sm" variant="outline" onClick={addItem}>
-            <Plus className="mr-2 h-4 w-4" /> Add Item
-          </Button>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {items.map((item, index) => (
-            <div key={index} className="space-y-4 border rounded-lg p-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    Description
-                    <span className="text-red-500">*</span>
-                  </Label>
-
-                  <Input
-                    value={item.description}
-                    onChange={(e) =>
-                      updateItem(index, "description", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    Project Name
-                    <span className="text-red-500">*</span>
-                  </Label>
-
-                  <Input
-                    value={item.projectName}
-                    onChange={(e) =>
-                      updateItem(index, "projectName", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    HSN Code
-                    <span className="text-red-500">*</span>
-                  </Label>
-
-                  <Input
-                    value={item.hashingCode}
-                    onChange={(e) =>
-                      updateItem(index, "hashingCode", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    Rate (₹ / sq.ft)
-                    <span className="text-red-500">*</span>
-                  </Label>
-
-                  <Input
-                    type="number"
-                    value={item.rate}
-                    onChange={(e) =>
-                      updateItem(index, "rate", Number(e.target.value))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    Area (sq.ft)
-                    <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    value={item.areaSqFt}
-                    onChange={(e) =>
-                      updateItem(index, "areaSqFt", Number(e.target.value))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Item Total: ₹
-                  {(item.rate * item.areaSqFt).toLocaleString("en-IN")}
-                </span>
-
-                {items.length > 1 && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => removeItem(index)}
-                  >
-                    <Trash className="mr-2 h-4 w-4" />
-                    Remove
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* ================= CHARGES & TAX ================= */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Charges & Tax</CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Parking</Label>
-              <Input
-                type="number"
-                value={parking}
-                onChange={(e) => setParking(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Amenities</Label>
-              <Input
-                type="number"
-                value={amenities}
-                onChange={(e) => setAmenities(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Other Charges</Label>
-              <Input
-                type="number"
-                value={otherCharges}
-                onChange={(e) => setOtherCharges(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                GST (%)
-                <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="number"
-                value={gstPercent}
-                onChange={(e) => setGstPercent(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="flex items-end justify-between text-sm">
-              <span>GST Amount</span>
-              <span className="font-semibold">
-                ₹{gstAmount.toLocaleString("en-IN")}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ================= PAYMENT SUMMARY ================= */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Summary</CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-5">
-          <div className="flex justify-between text-sm">
-            <span>Total Amount</span>
-            <span className="font-semibold">
-              ₹{totalAmount.toLocaleString("en-IN")}
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Advance Paid</Label>
-            <Input
-              type="number"
-              value={advance}
-              onChange={(e) => setAdvance(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <span>Remaining Amount</span>
-            <span className="font-semibold text-red-600">
-              ₹{remainingAmount.toLocaleString("en-IN")}
-            </span>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1">
-              Mode of Payment
-              <span className="text-red-500">*</span>
-            </Label>
+  if (newInvoice === null) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6 pb-20">
+        {/* ================= COMPANY ================= */}
+        <Card>
+          <CardContent className="space-y-2">
+            <Label>Invoice Issuing Company</Label>
             <Select
-              value={paymentMode}
-              onValueChange={(value) =>
-                setPaymentMode(value as typeof paymentMode)
-              }
+              value={company}
+              onValueChange={(value) => setCompany(value as typeof company)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select payment mode" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select company" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                <SelectItem value="Cheque">Cheque</SelectItem>
-                <SelectItem value="UPI">UPI</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Demand Draft">Demand Draft</SelectItem>
-                <SelectItem value="Others">Others</SelectItem>
+                <SelectItem value="Airde Real Estate">
+                  Airde Real Estate
+                </SelectItem>
+                <SelectItem value="Airde Developers">
+                  Airde Developers
+                </SelectItem>
+                <SelectItem value="Sora Realtors">Sora Realtors</SelectItem>
+                <SelectItem value="Unique Realcon">Unique Realcon</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </CardContent>
+        </Card>
 
-          {paymentMode === "Cheque" && (
+        {/* ================= CUSTOMER DETAILS ================= */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Customer Name
+                <span className="text-red-500">*</span>
+              </Label>
+
+              <Input
+                value={customer.name}
+                onChange={(e) =>
+                  setCustomer({ ...customer, name: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Phone Number
+                <span className="text-red-500">*</span>
+              </Label>
+
+              <Input
+                value={customer.phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+
+                  if (value.length <= 10) {
+                    setCustomer({ ...customer, phone: value });
+                  }
+                }}
+                placeholder="Enter 10-digit phone number"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="flex items-center gap-1">
+                Address
+                <span className="text-red-500">*</span>
+              </Label>
+
+              <Input
+                value={customer.address}
+                onChange={(e) =>
+                  setCustomer({ ...customer, address: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                PAN
+                <span className="text-red-500">*</span>
+              </Label>
+
+              <Input
+                value={customer.PAN}
+                maxLength={10}
+                onChange={(e) => {
+                  const value = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "");
+
+                  if (value.length <= 10) {
+                    setCustomer({ ...customer, PAN: value });
+                  }
+                }}
+                placeholder="ABCDE1234F"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                GSTIN <span className="text-muted-foreground">(Optional)</span>
+              </Label>
+
+              <Input
+                value={customer.GSTIN}
+                maxLength={15}
+                onChange={(e) => {
+                  const value = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, ""); // allow only alphanumeric
+
+                  if (value.length <= 15) {
+                    setCustomer({ ...customer, GSTIN: value });
+                  }
+                }}
+                placeholder="27AAPFU0939F1ZV"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ================= INVOICE ITEMS ================= */}
+        <Card>
+          <CardHeader className="flex justify-between items-center">
+            <CardTitle>Invoice Items</CardTitle>
+            <Button size="sm" variant="outline" onClick={addItem}>
+              <Plus className="mr-2 h-4 w-4" /> Add Item
+            </Button>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {items.map((item, index) => (
+              <div key={index} className="space-y-4 border rounded-lg p-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Description
+                      <span className="text-red-500">*</span>
+                    </Label>
+
+                    <Input
+                      value={item.description}
+                      onChange={(e) =>
+                        updateItem(index, "description", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Project Name
+                      <span className="text-red-500">*</span>
+                    </Label>
+
+                    <Input
+                      value={item.projectName}
+                      onChange={(e) =>
+                        updateItem(index, "projectName", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      HSN Code
+                      <span className="text-red-500">*</span>
+                    </Label>
+
+                    <Input
+                      value={item.hashingCode}
+                      onChange={(e) =>
+                        updateItem(index, "hashingCode", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Rate (₹ / sq.ft)
+                      <span className="text-red-500">*</span>
+                    </Label>
+
+                    <Input
+                      type="number"
+                      value={item.rate}
+                      onChange={(e) =>
+                        updateItem(index, "rate", Number(e.target.value))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Area (sq.ft)
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      value={item.areaSqFt}
+                      onChange={(e) =>
+                        updateItem(index, "areaSqFt", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Item Total: ₹
+                    {(item.rate * item.areaSqFt).toLocaleString("en-IN")}
+                  </span>
+
+                  {items.length > 1 && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => removeItem(index)}
+                    >
+                      <Trash className="mr-2 h-4 w-4" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* ================= CHARGES & TAX ================= */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Charges & Tax</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Parking</Label>
+                <Input
+                  type="number"
+                  value={parking}
+                  onChange={(e) => setParking(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Amenities</Label>
+                <Input
+                  type="number"
+                  value={amenities}
+                  onChange={(e) => setAmenities(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Other Charges</Label>
+                <Input
+                  type="number"
+                  value={otherCharges}
+                  onChange={(e) => setOtherCharges(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">
-                  Cheque Number
+                  GST (%)
                   <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  value={chequeNumber}
-                  maxLength={6}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ""); // digits only
-
-                    if (value.length <= 6) {
-                      setChequeNumber(value);
-                    }
-                  }}
-                  placeholder="Enter 6-digit cheque number"
+                  type="number"
+                  value={gstPercent}
+                  onChange={(e) => setGstPercent(Number(e.target.value))}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  Bank Name
-                  <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                />
+              <div className="flex items-end justify-between text-sm">
+                <span>GST Amount</span>
+                <span className="font-semibold">
+                  ₹{gstAmount.toLocaleString("en-IN")}
+                </span>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* ================= ACTIONS ================= */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline">Cancel</Button>
-        <Button disabled={loading} onClick={handleSubmit}>
-          {loading ? "Creating..." : "Create Invoice"}
+        {/* ================= PAYMENT SUMMARY ================= */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Summary</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div className="flex justify-between text-sm">
+              <span>Total Amount</span>
+              <span className="font-semibold">
+                ₹{totalAmount.toLocaleString("en-IN")}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Advance Paid</Label>
+              <Input
+                type="number"
+                value={advance}
+                onChange={(e) => setAdvance(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="flex justify-between text-sm">
+              <span>Remaining Amount</span>
+              <span className="font-semibold text-red-600">
+                ₹{remainingAmount.toLocaleString("en-IN")}
+              </span>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Mode of Payment
+                <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={paymentMode}
+                onValueChange={(value) =>
+                  setPaymentMode(value as typeof paymentMode)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Demand Draft">Demand Draft</SelectItem>
+                  <SelectItem value="Others">Others</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {paymentMode === "Cheque" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Cheque Number
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={chequeNumber}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ""); // digits only
+
+                      if (value.length <= 6) {
+                        setChequeNumber(value);
+                      }
+                    }}
+                    placeholder="Enter 6-digit cheque number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Bank Name
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ================= ACTIONS ================= */}
+        <div className="flex justify-end gap-3">
+          <Button variant="outline">Cancel</Button>
+          <Button disabled={loading} onClick={handleSubmit}>
+            {loading ? "Creating..." : "Create Invoice"}
+          </Button>
+        </div>
+      </div>
+    );
+  } else {
+    function handleNext(): void {
+      localStorage.removeItem("CREATED_INVOICE");
+      setNewInvoice(null);
+    }
+
+    return (
+      <div className="flex gap-3 pt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 flex items-center gap-2"
+          onClick={() =>
+            navigate(`/invoice/${newInvoice._id}`, {
+              state: { invoice: newInvoice },
+            })
+          }
+        >
+          <Download className="h-4 w-4" />
+          Download
+        </Button>
+        <Button size="sm" className="flex-1" onClick={() => handleNext()}>
+          Next
         </Button>
       </div>
-    </div>
-  );
+    );
+  }
 }

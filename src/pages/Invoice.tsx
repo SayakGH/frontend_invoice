@@ -19,13 +19,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import type {
-  INVOICE,
-  IGetAllInvoiceResponse,
-  IUpdateInvoicePaymentResponse,
-} from "@/types/invoiceType";
+import type { INVOICE, IGetAllInvoiceResponse } from "@/types/invoiceType";
 import { getAllInvoices, updateInvoice } from "@/api/invoice";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 /* ================= UTILS ================= */
 function getDateFromISOString(isoString: string) {
@@ -74,7 +71,7 @@ export default function Invoices() {
     chequeNumber?: string,
     bankName?: string
   ) => {
-    const data: IUpdateInvoicePaymentResponse = await updateInvoice(id, {
+    await updateInvoice(id, {
       amount,
       customerName,
       paymentMode,
@@ -91,7 +88,8 @@ export default function Invoices() {
     (inv) =>
       inv._id.toLowerCase().includes(search.toLowerCase()) ||
       inv.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customer.phone.includes(search)
+      inv.customer.phone.includes(search) ||
+      inv.company.name.toLowerCase().includes(search.toLowerCase())
   );
 
   /* ================= HANDLERS ================= */
@@ -109,14 +107,17 @@ export default function Invoices() {
 
     try {
       setLoading(true);
-      if (payment > selectedInvoice.remainingAmount || payment <= 0) {
+      if (
+        payment != null &&
+        (payment > selectedInvoice.remainingAmount || payment <= 0)
+      ) {
         throw new Error("Invalid payment amount");
       }
 
       await updateInvoicePayment(
         selectedInvoice._id,
         selectedInvoice.customer.name,
-        payment,
+        payment ?? 0,
         paymentMode,
         paymentMode === "Cheque" ? chequeNumber : undefined,
         paymentMode === "Cheque" ? bankName : undefined
@@ -127,8 +128,13 @@ export default function Invoices() {
 
       // refresh invoices
       getInvoices();
-    } catch (err) {
-      console.error("Payment update failed", err);
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || // Axios backend error
+        err?.message || // JS / network error
+        "Payment update failed";
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -273,9 +279,7 @@ export default function Invoices() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <Label>
-              Payment Amount (less than {selectedInvoice?.remainingAmount})
-            </Label>
+            <Label>Payment Amount</Label>
             <Input
               type="number"
               value={payment ?? ""}

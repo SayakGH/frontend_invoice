@@ -115,7 +115,7 @@ export interface INVOICE {
 
 export interface ICreateInvoiceResponse {
   message: string;
-  user: INVOICE;
+  invoice: INVOICE;
 }
 
 export interface IGetAllInvoiceResponse {

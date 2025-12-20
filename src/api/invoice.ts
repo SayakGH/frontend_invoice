@@ -1,12 +1,13 @@
 import api from "./axios";
 import type {
+  CreateInvoicePayload,
   ICreateInvoiceResponse,
   IGetAllInvoiceResponse,
   INVOICE,
   IUpdateInvoicePaymentResponse,
 } from "@/types/invoiceType.ts";
 
-export const createInvoice = async (data: INVOICE) => {
+export const createInvoice = async (data: CreateInvoicePayload) => {
   const token = localStorage.getItem("authToken");
 
   const res = await api.post<ICreateInvoiceResponse>(

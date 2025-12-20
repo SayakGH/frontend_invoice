@@ -1,7 +1,7 @@
 import { getAnalytics } from "@/api/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { IAnalyticsResponse } from "@/types/analyticsType";
+import type { IAnalyticsResponse, IInvoiceForGraph } from "@/types/analyticsType";
 import {
   LineChart,
   Line,
@@ -17,26 +17,32 @@ export default function Analytics() {
   const [totalInvoices, setTotalInvoices] = useState(0);
   const [totalDue, setTotalDue] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [paymentsData, setPaymentsData] = useState<{ date: string; amount: number }[]>([]);
 
   useEffect(() => {
     const fetchdata = async () => {
       const data: IAnalyticsResponse = await getAnalytics();
+
       setTotalInvoices(Number(data.analytics.totalInvoices));
       setTotalDue(Number(data.analytics.totalDue));
       setTotalPaid(Number(data.analytics.totalPaid));
+
+      // Map graphData to paymentsData
+      const chartData = data.graphData.map((inv: IInvoiceForGraph) => ({
+        // Format date as "DD MMM" for XAxis
+        date: new Date(inv.createdAt).toLocaleDateString("en-US", { day: "2-digit", month: "short" }),
+        // Total amount received for that invoice
+        amount: Number(inv.advance || 0),
+      }));
+
+      // Optional: sort by date ascending
+      chartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      setPaymentsData(chartData);
     };
+
     fetchdata();
   }, []);
-
-  const paymentsData = [
-    { date: "Aug 01", amount: 12000 },
-    { date: "Aug 05", amount: 24000 },
-    { date: "Aug 10", amount: 19000 },
-    { date: "Aug 15", amount: 18000 },
-    { date: "Aug 20", amount: 27000 },
-    { date: "Aug 25", amount: 30000 },
-    { date: "Aug 30", amount: 36000 },
-  ];
 
   return (
     <div className="space-y-6">
@@ -132,18 +138,10 @@ export default function Analytics() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={paymentsData}>
               <CartesianGrid strokeDasharray="3 3" />
-
               <XAxis dataKey="date" tick={{ fontSize: 12 }} tickMargin={8} />
-
               <YAxis />
               <Tooltip />
-
-              <Line
-                type="monotone"
-                dataKey="amount"
-                strokeWidth={3}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="amount" strokeWidth={3} dot={false} stroke="#4ade80" />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

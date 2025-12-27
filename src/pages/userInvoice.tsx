@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Pencil, Search, Trash2 } from "lucide-react";
+import { Download, Pencil, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,16 +18,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import type { INVOICE, IGetAllInvoiceResponse } from "@/types/invoiceType";
 import { getAllUserInvoices, getHistory, updateInvoice } from "@/api/invoice";

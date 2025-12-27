@@ -106,7 +106,6 @@ const InvoicePage: React.FC<InvoiceProps> = ({ invoice }) => {
     charges,
     gst,
     itemsTotal,
-    subTotal,
     totalAmount,
     advance,
     remainingAmount,

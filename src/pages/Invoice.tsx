@@ -65,6 +65,9 @@ export default function Invoices() {
   const [bankName, setBankName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [chequeError, setChequeError] = useState("");
+  const [bankError, setBankError] = useState("");
+
   /* ===== Delete ===== */
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
@@ -120,14 +123,31 @@ export default function Invoices() {
   };
 
   const handleUpdate = async () => {
-    if (!selectedInvoice || payment === null) return;
+    if (!selectedInvoice || payment === null) {
+      toast.error("Please enter payment amount");
+      return;
+    }
+
+    if (payment <= 0 || payment > selectedInvoice.remainingAmount) {
+      toast.error("Invalid payment amount");
+      return;
+    }
+
+    // CHEQUE VALIDATION
+    if (paymentMode === "Cheque") {
+      if (chequeNumber.length !== 6) {
+        toast.error("Cheque number must be 6 digits");
+        return;
+      }
+
+      if (!bankName.trim()) {
+        toast.error("Bank name is required");
+        return;
+      }
+    }
 
     try {
       setLoading(true);
-
-      if (payment <= 0 || payment > selectedInvoice.remainingAmount) {
-        throw new Error("Invalid payment amount");
-      }
 
       await updateInvoice(selectedInvoice._id, {
         amount: payment,
@@ -406,15 +426,42 @@ export default function Invoices() {
 
           {paymentMode === "Cheque" && (
             <>
+              {/* CHEQUE NUMBER */}
               <Input
-                placeholder="Cheque Number"
+                placeholder="Enter 6 digit cheque number"
                 value={chequeNumber}
-                onChange={(e) => setChequeNumber(e.target.value)}
+                maxLength={6}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  // Only digits allowed
+                  if (!/^\d*$/.test(value)) return;
+
+                  setChequeNumber(value);
+
+                  if (value.length != 6) {
+                    setChequeError("Cheque number must be 6 digits");
+                  } else {
+                    setChequeError("");
+                  }
+                }}
+                className={chequeError ? "border-red-500" : ""}
               />
+
+              {/* BANK NAME */}
               <Input
                 placeholder="Bank Name"
                 value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
+                onChange={(e) => {
+                  setBankName(e.target.value);
+
+                  if (!e.target.value.trim()) {
+                    setBankError("Bank name is required");
+                  } else {
+                    setBankError("");
+                  }
+                }}
+                className={bankError ? "border-red-500" : ""}
               />
             </>
           )}

@@ -5,7 +5,7 @@
 export interface CreateInvoicePayload {
   company:
     | "Airde Real Estate"
-    | "Airde Developers"
+    | "Airde Developer"
     | "Sora Realtor"
     | "Unique Realcon";
 

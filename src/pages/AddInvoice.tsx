@@ -63,7 +63,7 @@ export default function AddInvoice() {
 
   // Company
   const [company, setCompany] = useState<
-    "Airde Real Estate" | "Airde Developers" | "Sora Realtor" | "Unique Realcon"
+    "Airde Real Estate" | "Airde Developer" | "Sora Realtor" | "Unique Realcon"
   >("Unique Realcon");
 
   // Customer
@@ -306,9 +306,7 @@ export default function AddInvoice() {
                 <SelectItem value="Airde Real Estate">
                   Airde Real Estate
                 </SelectItem>
-                <SelectItem value="Airde Developers">
-                  Airde Developers
-                </SelectItem>
+                <SelectItem value="Airde Developer">Airde Developer</SelectItem>
                 <SelectItem value="Sora Realtor">Sora Realtor</SelectItem>
                 <SelectItem value="Unique Realcon">Unique Realcon</SelectItem>
               </SelectContent>

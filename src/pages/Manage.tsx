@@ -73,14 +73,12 @@ export default function Manage() {
     }
 
     try {
-      await addUsers(name, email, password); // your API call
-      await fetchUsers(); // refresh list
-      // ✅ No success toast as requested
+      await addUsers(name, email, password);
+      await fetchUsers();
     } catch (err: any) {
       const errorMessage =
         err?.response?.data?.message || "Failed to add employee.";
 
-      // ❌ Custom Tailwind error toast
       toast.custom((t: any) => (
         <div
           className={`${

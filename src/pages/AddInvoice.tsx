@@ -111,9 +111,7 @@ export default function AddInvoice() {
   const subTotal = itemsTotal + extraCharges;
   const gstAmount = (advance * gstPercent) / 100;
   const totalAmount = subTotal;
-  const remainingAmount = Math.ceil(
-    Math.max(totalAmount - advance + gstAmount, 0)
-  );
+  const remainingAmount = Math.max(totalAmount - advance + gstAmount, 0);
 
   /* ================= HANDLERS ================= */
 
@@ -234,6 +232,11 @@ export default function AddInvoice() {
         toast.error("Cheque number and bank name are required");
         return;
       }
+    }
+
+    if (advance <= 0) {
+      toast.error("Advance payment must be greater than 0");
+      return;
     }
 
     if (advance > totalAmount) {
@@ -477,6 +480,7 @@ export default function AddInvoice() {
 
                     <Input
                       type="number"
+                      min="0"
                       value={item.rate}
                       onChange={(e) =>
                         updateItem(index, "rate", Number(e.target.value))
@@ -491,6 +495,7 @@ export default function AddInvoice() {
                     </Label>
                     <Input
                       type="number"
+                      min="0"
                       value={item.areaSqFt}
                       onChange={(e) =>
                         updateItem(index, "areaSqFt", Number(e.target.value))
@@ -533,6 +538,7 @@ export default function AddInvoice() {
                 <Label>Parking</Label>
                 <Input
                   type="number"
+                  min="0"
                   value={parking}
                   onChange={(e) => setParking(Number(e.target.value))}
                 />
@@ -542,6 +548,7 @@ export default function AddInvoice() {
                 <Label>Amenities</Label>
                 <Input
                   type="number"
+                  min="0"
                   value={amenities}
                   onChange={(e) => setAmenities(Number(e.target.value))}
                 />
@@ -551,6 +558,7 @@ export default function AddInvoice() {
                 <Label>Other Charges</Label>
                 <Input
                   type="number"
+                  min="0"
                   value={otherCharges}
                   onChange={(e) => setOtherCharges(Number(e.target.value))}
                 />
@@ -567,6 +575,7 @@ export default function AddInvoice() {
                 </Label>
                 <Input
                   type="number"
+                  min="0"
                   value={gstPercent}
                   onChange={(e) => setGstPercent(Number(e.target.value))}
                 />
@@ -597,9 +606,13 @@ export default function AddInvoice() {
             </div>
 
             <div className="space-y-2">
-              <Label>Advance Paid</Label>
+              <Label>
+                Advance Paid <span className="text-red-500">*</span>
+              </Label>
+
               <Input
                 type="number"
+                min="0"
                 value={advance}
                 onChange={(e) => setAdvance(Number(e.target.value))}
               />

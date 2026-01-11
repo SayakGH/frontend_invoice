@@ -34,6 +34,7 @@ export default function Analytics() {
   const [totalDue, setTotalDue] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentsData, setPaymentsData] = useState<IChart[]>([]);
+  const [totalEstimate, setTotalEstimate] = useState(0);
 
   /* ================= FETCH DATA ================= */
 
@@ -46,6 +47,10 @@ export default function Analytics() {
       setTotalDue(Number(analytics.analytics.totalDue));
       setTotalPaid(Number(analytics.analytics.totalPaid));
       setPaymentsData(summary.analytics.last30DaysPayments);
+      setTotalEstimate(
+        Number(analytics.analytics.totalDue) +
+          Number(analytics.analytics.totalPaid)
+      );
     };
 
     fetchData();
@@ -67,7 +72,7 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       {/* ================= DESKTOP STATS ================= */}
-      <div className="hidden md:grid grid-cols-3 gap-6">
+      <div className="hidden md:grid grid-cols-4 gap-6">
         <StatCard title="Total Invoices" value={totalInvoices} />
         <StatCard
           title="Total Amount Due"
@@ -79,15 +84,20 @@ export default function Analytics() {
           value={`₹${totalPaid.toLocaleString("en-IN")}`}
           color="text-green-600"
         />
+        <StatCard
+          title="Total Estimate"
+          value={`₹${totalEstimate.toLocaleString("en-IN")}`}
+        />
       </div>
 
       {/* ================= MOBILE STATS ================= */}
       <div className="md:hidden">
         <Tabs defaultValue="invoices">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-4">
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="due">Due</TabsTrigger>
             <TabsTrigger value="paid">Paid</TabsTrigger>
+            <TabsTrigger value="estimate">Estimate</TabsTrigger>
           </TabsList>
 
           <TabsContent value="invoices">
@@ -107,6 +117,12 @@ export default function Analytics() {
               title="Total Paid Amount"
               value={`₹${totalPaid.toLocaleString("en-IN")}`}
               color="text-green-600"
+            />
+          </TabsContent>
+          <TabsContent value="estimate">
+            <StatCard
+              title="Total Estimate"
+              value={`₹${totalEstimate.toLocaleString("en-IN")}`}
             />
           </TabsContent>
         </Tabs>

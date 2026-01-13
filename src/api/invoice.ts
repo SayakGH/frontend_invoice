@@ -116,3 +116,31 @@ export const deleteInvoice = async (invoiceId: string) => {
 
   return res.data;
 };
+
+export const updateInvoicePhone = async (invoiceId: string, phone: string) => {
+  const token = localStorage.getItem("authToken");
+
+  const res = await api.put(
+    `/invoices/update-phone/${invoiceId}`,
+    { phone },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return res.data;
+};
+
+export const updateInvoicePAN = async (invoiceId: string, pan: string) => {
+  const token = localStorage.getItem("authToken");
+
+  const res = await api.put(
+    `/invoices/update-pan/${invoiceId}`,
+    { pan },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return res.data;
+};

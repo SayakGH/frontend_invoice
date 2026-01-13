@@ -35,6 +35,8 @@ import {
   updateInvoice,
   deleteInvoice,
   getHistory,
+  updateInvoicePhone,
+  updateInvoicePAN,
 } from "@/api/invoice";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -67,6 +69,12 @@ export default function Invoices() {
 
   const [chequeError, setChequeError] = useState("");
   const [bankError, setBankError] = useState("");
+
+  const [editTab, setEditTab] = useState<"payment" | "kyc">("payment");
+
+  const [newPhone, setNewPhone] = useState("");
+  const [newPAN, setNewPAN] = useState("");
+  const [kycLoading, setKycLoading] = useState(false);
 
   /* ===== Delete ===== */
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -106,6 +114,12 @@ export default function Invoices() {
     setPaymentMode("Bank Transfer");
     setChequeNumber("");
     setBankName("");
+
+    // preload KYC
+    setNewPhone(invoice.customer.phone);
+    setNewPAN(invoice.customer.PAN);
+
+    setEditTab("payment");
     setOpen(true);
   };
 
@@ -119,6 +133,29 @@ export default function Invoices() {
       toast.error("Failed to load invoice history");
     } finally {
       setHistoryLoading(false);
+    }
+  };
+  const handleKycUpdate = async () => {
+    if (!selectedInvoice) return;
+
+    try {
+      setKycLoading(true);
+
+      if (newPhone !== selectedInvoice.customer.phone) {
+        await updateInvoicePhone(selectedInvoice._id, newPhone);
+      }
+
+      if (newPAN !== selectedInvoice.customer.PAN) {
+        await updateInvoicePAN(selectedInvoice._id, newPAN);
+      }
+
+      toast.success("KYC updated successfully");
+      setOpen(false);
+      fetchInvoices();
+    } catch (err: any) {
+      toast.error(err?.message || "KYC update failed");
+    } finally {
+      setKycLoading(false);
     }
   };
 
@@ -390,88 +427,155 @@ export default function Invoices() {
 
       {/* ================= EDIT PAYMENT MODAL ================= */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Payment</DialogTitle>
+            <DialogTitle>Edit Invoice</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <Label>Amount</Label>
-            <Input
-              type="number"
-              value={payment ?? ""}
-              onChange={(e) =>
-                setPayment(
-                  e.target.value === "" ? null : Number(e.target.value)
-                )
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Payment Mode</Label>
-            <select
-              className="w-full border rounded-md h-10 px-3"
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value as any)}
+          {/* ===== Tabs ===== */}
+          <div className="flex border-b mb-4">
+            <button
+              onClick={() => setEditTab("payment")}
+              className={`flex-1 py-2 text-sm font-medium ${
+                editTab === "payment"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground"
+              }`}
             >
-              <option>Bank Transfer</option>
-              <option>Cheque</option>
-              <option>UPI</option>
-              <option>Cash</option>
-              <option>Demand Draft</option>
-              <option>Others</option>
-            </select>
+              Payment
+            </button>
+
+            <button
+              onClick={() => setEditTab("kyc")}
+              className={`flex-1 py-2 text-sm font-medium ${
+                editTab === "kyc"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground"
+              }`}
+            >
+              KYC
+            </button>
           </div>
 
-          {paymentMode === "Cheque" && (
+          {editTab === "payment" && (
             <>
-              {/* CHEQUE NUMBER */}
-              <Input
-                placeholder="Enter 6 digit cheque number"
-                value={chequeNumber}
-                maxLength={6}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  // Only digits allowed
-                  if (!/^\d*$/.test(value)) return;
-
-                  setChequeNumber(value);
-
-                  if (value.length != 6) {
-                    setChequeError("Cheque number must be 6 digits");
-                  } else {
-                    setChequeError("");
+              <DialogHeader>
+                <DialogTitle>Add Payment</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  value={payment ?? ""}
+                  onChange={(e) =>
+                    setPayment(
+                      e.target.value === "" ? null : Number(e.target.value)
+                    )
                   }
-                }}
-                className={chequeError ? "border-red-500" : ""}
-              />
+                />
+              </div>
 
-              {/* BANK NAME */}
-              <Input
-                placeholder="Bank Name"
-                value={bankName}
-                onChange={(e) => {
-                  setBankName(e.target.value);
+              <div className="space-y-2">
+                <Label>Payment Mode</Label>
+                <select
+                  className="w-full border rounded-md h-10 px-3"
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value as any)}
+                >
+                  <option>Bank Transfer</option>
+                  <option>Cheque</option>
+                  <option>UPI</option>
+                  <option>Cash</option>
+                  <option>Demand Draft</option>
+                  <option>Others</option>
+                </select>
+              </div>
 
-                  if (!e.target.value.trim()) {
-                    setBankError("Bank name is required");
-                  } else {
-                    setBankError("");
-                  }
-                }}
-                className={bankError ? "border-red-500" : ""}
-              />
+              {paymentMode === "Cheque" && (
+                <>
+                  {/* CHEQUE NUMBER */}
+                  <Input
+                    placeholder="Enter 6 digit cheque number"
+                    value={chequeNumber}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      // Only digits allowed
+                      if (!/^\d*$/.test(value)) return;
+
+                      setChequeNumber(value);
+
+                      if (value.length != 6) {
+                        setChequeError("Cheque number must be 6 digits");
+                      } else {
+                        setChequeError("");
+                      }
+                    }}
+                    className={chequeError ? "border-red-500" : ""}
+                  />
+
+                  {/* BANK NAME */}
+                  <Input
+                    placeholder="Bank Name"
+                    value={bankName}
+                    onChange={(e) => {
+                      setBankName(e.target.value);
+
+                      if (!e.target.value.trim()) {
+                        setBankError("Bank name is required");
+                      } else {
+                        setBankError("");
+                      }
+                    }}
+                    className={bankError ? "border-red-500" : ""}
+                  />
+                </>
+              )}
             </>
+          )}
+          {editTab === "kyc" && (
+            <div className="space-y-4">
+              <div>
+                <Label>Phone</Label>
+                <Input
+                  value={newPhone}
+                  maxLength={10}
+                  onChange={(e) =>
+                    setNewPhone(e.target.value.replace(/\D/g, ""))
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>PAN</Label>
+                <Input
+                  value={newPAN}
+                  maxLength={10}
+                  onChange={(e) => {
+                    //setNewPAN(e.target.value.toUpperCase())
+                    const value = e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "");
+                    if (value.length <= 10) {
+                      setNewPAN(value);
+                    }
+                  }}
+                  placeholder="ABCDE1234F"
+                />
+              </div>
+            </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={loading}>
-              {loading ? "Saving..." : "Add"}
+            <Button
+              onClick={editTab === "payment" ? handleUpdate : handleKycUpdate}
+              disabled={loading || kycLoading}
+            >
+              {loading || kycLoading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

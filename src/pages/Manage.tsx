@@ -36,12 +36,20 @@ export default function Manage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<IUser | null>(null);
 
   const fetchUsers = async () => {
-    const data: IGetAllUsersResponse = await getAllUsersExceptAdmin();
-    setEmployees(data.users);
+    try {
+      setLoading(true);
+      const data: IGetAllUsersResponse = await getAllUsersExceptAdmin();
+      setEmployees(data.users);
+    } catch {
+      errorToast("Failed to load employees");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addUsers = async (name: string, email: string, password: string) => {
@@ -152,50 +160,99 @@ export default function Manage() {
         </Dialog>
       </div>
 
+      {/* ========== MOBILE VIEW ========== */}
+      <div className="block md:hidden space-y-3">
+        {loading ? (
+          <>
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+          </>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            No employees found
+          </div>
+        ) : (
+          filteredEmployees.map((emp) => (
+            <Card key={emp._id} className="shadow-sm">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center text-lg font-bold">
+                    {emp.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  <div>
+                    <p className="font-semibold">{emp.name}</p>
+                    <p className="text-sm text-muted-foreground">{emp.email}</p>
+                    <span className="text-xs px-2 py-1 rounded-full bg-muted">
+                      {emp.role.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => setDeleteTarget(emp)}
+                >
+                  Remove Employee
+                </Button>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
       {/* EMPLOYEE LIST */}
-      <Card className="shadow-sm">
+      <Card className="hidden md:block shadow-sm">
         <CardHeader>
           <CardTitle>Employees</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {filteredEmployees.length === 0 && (
+          {loading ? (
+            <div className="space-y-3">
+              <div className="h-12 w-full bg-muted animate-pulse rounded" />
+              <div className="h-12 w-full bg-muted animate-pulse rounded" />
+              <div className="h-12 w-full bg-muted animate-pulse rounded" />
+            </div>
+          ) : filteredEmployees.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p className="text-lg font-semibold">No employees found</p>
               <p className="text-sm">
                 Try changing search or add a new team member.
               </p>
             </div>
-          )}
-
-          {filteredEmployees.map((emp) => (
-            <div
-              key={emp._id}
-              className="flex items-center justify-between p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center text-lg font-bold">
-                  {emp.name.charAt(0).toUpperCase()}
-                </div>
-
-                <div>
-                  <p className="font-semibold">{emp.name}</p>
-                  <p className="text-sm text-gray-500">{emp.email}</p>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
-                    {emp.role.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteTarget(emp)}
+          ) : (
+            filteredEmployees.map((emp) => (
+              <div
+                key={emp._id}
+                className="flex items-center justify-between p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition"
               >
-                Remove
-              </Button>
-            </div>
-          ))}
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center text-lg font-bold">
+                    {emp.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  <div>
+                    <p className="font-semibold">{emp.name}</p>
+                    <p className="text-sm text-gray-500">{emp.email}</p>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
+                      {emp.role.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteTarget(emp)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -241,4 +298,22 @@ function errorToast(message: string) {
       </div>
     </div>
   ));
+}
+
+function EmployeeCardSkeleton() {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="pt-4 space-y-3">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+            <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+
+        <div className="h-9 w-full bg-muted rounded animate-pulse" />
+      </CardContent>
+    </Card>
+  );
 }

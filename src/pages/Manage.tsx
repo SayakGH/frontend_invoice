@@ -26,6 +26,7 @@ import type {
   IUser,
 } from "@/types/userType";
 import { toast } from "sonner";
+import { Search, XCircle } from "lucide-react";
 
 export default function Manage() {
   const [employees, setEmployees] = useState<IUser[]>([]);
@@ -36,12 +37,24 @@ export default function Manage() {
   const [password, setPassword] = useState("");
   const [open, setOpen] = useState(false);
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = useState<IUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<IUser | null>(null);
 
   const fetchUsers = async () => {
     const data: IGetAllUsersResponse = await getAllUsersExceptAdmin();
     setEmployees(data.users);
+  };
+
+  const addUsers = async (name: string, email: string, password: string) => {
+    await registerUser(name, email, password);
+  };
+
+  const deleteUsers = async (
+    _id: string,
+    email: string,
+    role: "user" | "admin",
+  ) => {
+    const data: IDeleteUserResponse = await deleteUser(_id, email, role);
+    return data;
   };
 
   useEffect(() => {
@@ -49,17 +62,16 @@ export default function Manage() {
   }, []);
 
   const addEmployee = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      toast.error("Please fill in name, email and password");
+    if (!name || !email || !password) {
+      errorToast("Please fill all fields");
       return;
     }
 
     try {
-      await registerUser(name, email, password);
-      toast.success("Employee added");
+      await addUsers(name, email, password);
       await fetchUsers();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to add employee");
+      errorToast(err?.response?.data?.message || "Failed to add employee");
     } finally {
       setOpen(false);
       setName("");
@@ -68,72 +80,62 @@ export default function Manage() {
     }
   };
 
-  const confirmDelete = (emp: IUser) => {
-    setEmployeeToDelete(emp);
-    setDeleteOpen(true);
-  };
-
-  const deleteEmployee = async () => {
-    if (!employeeToDelete) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const res: IDeleteUserResponse = await deleteUser(
-        employeeToDelete._id,
-        employeeToDelete.email,
-        employeeToDelete.role
+      await deleteUsers(
+        deleteTarget._id,
+        deleteTarget.email,
+        deleteTarget.role,
       );
-
-      if (res.success === false) {
-        toast.error(res.message);
-      } else {
-        toast.success("Employee deleted");
-      }
-
       await fetchUsers();
-    } catch (err) {
-      toast.error("Failed to delete employee");
+    } catch {
+      errorToast("Failed to delete employee");
     } finally {
-      setDeleteOpen(false);
-      setEmployeeToDelete(null);
+      setDeleteTarget(null);
     }
   };
 
-  const filteredEmployees = employees.filter((emp) =>
-    emp.name.toLowerCase().includes(search.toLowerCase())
+  const filteredEmployees = employees.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       <h1 className="text-2xl font-bold">Manage Employees</h1>
 
-      {/* Search + Add */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <Input
-          placeholder="Search employee by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="md:w-1/2"
-        />
+      {/* SEARCH + ADD */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between">
+        <div className="relative w-full md:w-1/2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+
+          <Input
+            placeholder="Search employees..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>Add Employee</Button>
           </DialogTrigger>
 
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-md rounded-xl">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="grid gap-4">
               <Input
                 placeholder="Full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
               <Input
-                placeholder="Email"
-                type="email"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -143,59 +145,77 @@ export default function Manage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <Button onClick={addEmployee}>Save Employee</Button>
+
+              <Button onClick={addEmployee}>Create Account</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Employee List */}
-      <Card>
+      {/* EMPLOYEE LIST */}
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Employees</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {filteredEmployees.length === 0 && (
-            <p className="text-muted-foreground">No employees found</p>
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg font-semibold">No employees found</p>
+              <p className="text-sm">
+                Try changing search or add a new team member.
+              </p>
+            </div>
           )}
 
           {filteredEmployees.map((emp) => (
             <div
               key={emp._id}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded-lg p-4 bg-white"
+              className="flex items-center justify-between p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition"
             >
-              <div>
-                <p className="font-semibold">{emp.name}</p>
-                <p className="text-sm text-muted-foreground">{emp.email}</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center text-lg font-bold">
+                  {emp.name.charAt(0).toUpperCase()}
+                </div>
+
+                <div>
+                  <p className="font-semibold">{emp.name}</p>
+                  <p className="text-sm text-gray-500">{emp.email}</p>
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
+                    {emp.role.toUpperCase()}
+                  </span>
+                </div>
               </div>
 
-              <Button variant="destructive" onClick={() => confirmDelete(emp)}>
-                Delete
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteTarget(emp)}
+              >
+                Remove
               </Button>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      {/* DELETE CONFIRMATION */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={() => setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Employee?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>{employeeToDelete?.name}</strong>? This action cannot be
-              undone.
+              This will permanently remove <strong>{deleteTarget?.name}</strong>
+              . This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={deleteEmployee}
-            >
+            <AlertDialogAction onClick={confirmDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -203,4 +223,22 @@ export default function Manage() {
       </AlertDialog>
     </div>
   );
+}
+
+/* ===== ERROR TOAST ===== */
+
+function errorToast(message: string) {
+  toast.custom((t: any) => (
+    <div
+      className={`${
+        t.visible ? "animate-in fade-in" : "animate-out fade-out"
+      } bg-red-50 border border-red-300 text-red-800 rounded-xl shadow-md p-4 flex gap-3`}
+    >
+      <XCircle className="w-6 h-6 text-red-600" />
+      <div>
+        <p className="font-semibold">Error</p>
+        <p className="text-sm">{message}</p>
+      </div>
+    </div>
+  ));
 }

@@ -221,7 +221,7 @@ const InvoicePage: React.FC<InvoiceProps> = ({ invoice }) => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Description</th>
+                <th style={{ ...styles.th, ...styles.descTh }}>Description</th>
                 <th style={styles.th}>Floor/Project Name</th>
                 <th style={styles.th}>HSN Code</th>
                 <th style={{ ...styles.th, textAlign: "right" }}>Area</th>
@@ -236,7 +236,9 @@ const InvoicePage: React.FC<InvoiceProps> = ({ invoice }) => {
 
                 return (
                   <tr key={idx}>
-                    <td style={styles.td}>{item.description}</td>
+                    <td style={{ ...styles.td, ...styles.descTd }}>
+                      {item.description}
+                    </td>
                     <td style={styles.td}>{item.projectName}</td>
                     <td style={styles.td}>{item.hashingCode}</td>
                     <td style={{ ...styles.td, textAlign: "right" }}>
@@ -415,6 +417,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderCollapse: "collapse",
     marginTop: 12,
     fontSize: 11.5,
+  },
+  descTh: {
+    maxWidth: 380,
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+  },
+
+  descTd: {
+    maxWidth: 380,
+    whiteSpace: "normal",
+    wordBreak: "break-word",
   },
   disclaimer: {
     marginTop: 25,

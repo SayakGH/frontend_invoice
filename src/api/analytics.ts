@@ -27,3 +27,18 @@ export const getSummary = async () => {
 
   return res.data;
 };
+
+export const getCompanyAnalytics = async (company: string) => {
+  const token = localStorage.getItem("authToken");
+
+  const res = await api.get<IAnalyticsResponse>(
+    `/analytics/company/${encodeURIComponent(company)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return res.data;
+};

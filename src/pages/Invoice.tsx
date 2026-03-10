@@ -62,6 +62,21 @@ import {
 const getDate = (iso: string) => iso.split("T")[0];
 const getTime = (iso: string) => iso.split("T")[1].slice(0, 5);
 
+type Company =
+  | "All"
+  | "Airde Real Estate"
+  | "Airde Developer"
+  | "Sora Realtor"
+  | "Unique Realcon";
+
+const formatAmount = (value: number | string) => {
+  const num = Number(value || 0);
+  return num.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 /* ================= COMPONENT ================= */
 export default function Invoices() {
   const navigate = useNavigate();
@@ -92,6 +107,7 @@ export default function Invoices() {
   const [newPhone, setNewPhone] = useState("");
   const [newPAN, setNewPAN] = useState("");
   const [kycLoading, setKycLoading] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<Company>("All");
 
   /* ===== Delete ===== */
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -114,14 +130,19 @@ export default function Invoices() {
   };
 
   /* ================= FILTER ================= */
-  const filteredInvoices = invoices.filter(
-    (inv) =>
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesSearch =
       inv._id.toLowerCase().includes(search.toLowerCase()) ||
       inv.customer.name.toLowerCase().includes(search.toLowerCase()) ||
       inv.customer.phone.includes(search) ||
       inv.company.name.toLowerCase().includes(search.toLowerCase()) ||
-      inv.executiveName.toLowerCase().includes(search.toLowerCase()),
-  );
+      inv.executiveName.toLowerCase().includes(search.toLowerCase());
+
+    const matchesCompany =
+      companyFilter === "All" || inv.company.name === companyFilter;
+
+    return matchesSearch && matchesCompany;
+  });
 
   /* ================= HANDLERS ================= */
 
@@ -300,24 +321,41 @@ export default function Invoices() {
   return (
     <div className="space-y-6">
       {/* SEARCH */}
-      <div className="flex gap-3 items-center">
+      <div className="flex items-center gap-3 w-full">
+        {/* Search Input */}
         <Input
           placeholder="Search invoice / customer / phone"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[200px]"
         />
 
+        {/* Company Dropdown */}
+        <select
+          value={companyFilter}
+          onChange={(e) => setCompanyFilter(e.target.value as Company)}
+          className="border rounded-md h-10 px-3 bg-white min-w-[180px]"
+        >
+          <option value="All">All Companies</option>
+          <option value="Airde Real Estate">Airde Real Estate</option>
+          <option value="Airde Developer">Airde Developer</option>
+          <option value="Sora Realtor">Sora Realtor</option>
+          <option value="Unique Realcon">Unique Realcon</option>
+        </select>
+
+        {/* Clear Button */}
         {search && (
           <Button
             variant="outline"
             onClick={clearSearch}
-            className="text-sm px-3"
+            className="whitespace-nowrap"
           >
             Clear
           </Button>
         )}
 
-        <Button>
+        {/* Search Icon */}
+        <Button size="icon">
           <Search className="h-4 w-4" />
         </Button>
       </div>
@@ -360,10 +398,12 @@ export default function Invoices() {
 
                 <TableCell>{inv.customer.name}</TableCell>
                 <TableCell>{inv.customer.phone}</TableCell>
-                <TableCell>₹{inv.totalAmount}</TableCell>
-                <TableCell>₹{inv.advance}</TableCell>
+                <TableCell>₹{formatAmount(inv.totalAmount)}</TableCell>
+
+                <TableCell>₹{formatAmount(inv.advance)}</TableCell>
+
                 <TableCell className="text-red-600 font-semibold">
-                  ₹{inv.remainingAmount}
+                  ₹{formatAmount(inv.remainingAmount)}
                 </TableCell>
                 <TableCell>{inv.executiveName}</TableCell>
                 <TableCell>{getDate(inv.createdAt)}</TableCell>
@@ -466,7 +506,7 @@ export default function Invoices() {
                       Remaining
                     </p>
                     <p className="font-bold text-red-600 text-lg">
-                      ₹{inv.remainingAmount}
+                      ₹{formatAmount(inv.remainingAmount)}
                     </p>
                   </div>
                 </div>
@@ -477,13 +517,17 @@ export default function Invoices() {
                     <p className="text-muted-foreground text-xs">
                       Total Amount
                     </p>
-                    <p className="font-medium">₹{inv.totalAmount}</p>
+                    <p className="font-medium">
+                      ₹{formatAmount(inv.totalAmount)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">
                       Advance Paid
                     </p>
-                    <p className="font-medium text-green-600">₹{inv.advance}</p>
+                    <p className="font-medium text-green-600">
+                      ₹{formatAmount(inv.advance)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Agent</p>
@@ -710,14 +754,14 @@ export default function Invoices() {
                     <TableRow key={inv._id}>
                       <TableCell className="font-medium">{inv._id}</TableCell>
 
-                      <TableCell>₹{inv.totalAmount}</TableCell>
+                      <TableCell>₹{formatAmount(inv.totalAmount)}</TableCell>
 
                       <TableCell className="text-green-700">
-                        ₹{inv.advance}
+                        ₹{formatAmount(inv.advance)}
                       </TableCell>
 
                       <TableCell className="text-red-600 font-semibold">
-                        ₹{inv.remainingAmount}
+                        ₹{formatAmount(inv.remainingAmount)}
                       </TableCell>
 
                       <TableCell>{getDate(inv.createdAt)}</TableCell>

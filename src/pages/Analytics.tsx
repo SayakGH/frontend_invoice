@@ -28,6 +28,13 @@ type Company =
 
 /* ================= HELPERS ================= */
 
+const formatAmount = (value: number | string) => {
+  return Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 const formatYAxis = (value: number) => {
   if (value >= 1_00_00_000) return `${(value / 1_00_00_000).toFixed(1)} Cr`;
   if (value >= 1_00_000) return `${(value / 1_00_000).toFixed(1)} L`;
@@ -46,6 +53,7 @@ export default function Analytics() {
   const [companyInvoices, setCompanyInvoices] = useState(0);
   const [companyDue, setCompanyDue] = useState(0);
   const [companyPaid, setCompanyPaid] = useState(0);
+  const [companyEstimate, setCompanyEstimate] = useState(0);
 
   /* ================= FETCH GLOBAL DATA ================= */
 
@@ -54,15 +62,15 @@ export default function Analytics() {
       const [analytics, summary]: [IAnalyticsResponse, IGetSummaryResponse] =
         await Promise.all([getAnalytics(), getSummary()]);
 
+      const due = Number(analytics.analytics.totalDue);
+      const paid = Number(analytics.analytics.totalPaid);
+
       setTotalInvoices(Number(analytics.analytics.totalInvoices));
-      setTotalDue(Number(analytics.analytics.totalDue));
-      setTotalPaid(Number(analytics.analytics.totalPaid));
+      setTotalDue(due);
+      setTotalPaid(paid);
       setPaymentsData(summary.analytics.last30DaysPayments);
 
-      setTotalEstimate(
-        Number(analytics.analytics.totalDue) +
-          Number(analytics.analytics.totalPaid),
-      );
+      setTotalEstimate(due + paid);
     };
 
     fetchData();
@@ -74,9 +82,13 @@ export default function Analytics() {
     const fetchCompanyAnalytics = async () => {
       const data = await getCompanyAnalytics(company);
 
+      const due = Number(data.analytics.totalDue);
+      const paid = Number(data.analytics.totalPaid);
+
       setCompanyInvoices(Number(data.analytics.totalInvoices));
-      setCompanyDue(Number(data.analytics.totalDue));
-      setCompanyPaid(Number(data.analytics.totalPaid));
+      setCompanyDue(due);
+      setCompanyPaid(paid);
+      setCompanyEstimate(due + paid);
     };
 
     fetchCompanyAnalytics();
@@ -97,8 +109,6 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      {/* ================= COMPANY SELECT ================= */}
-
       {/* ================= GLOBAL DESKTOP STATS ================= */}
 
       <div className="hidden md:grid grid-cols-4 gap-6">
@@ -106,19 +116,19 @@ export default function Analytics() {
 
         <StatCard
           title="Total Amount Due"
-          value={`₹${totalDue.toLocaleString("en-IN")}`}
+          value={`₹${formatAmount(totalDue)}`}
           color="text-red-600"
         />
 
         <StatCard
           title="Total Paid Amount"
-          value={`₹${totalPaid.toLocaleString("en-IN")}`}
+          value={`₹${formatAmount(totalPaid)}`}
           color="text-green-600"
         />
 
         <StatCard
           title="Total Estimate"
-          value={`₹${totalEstimate.toLocaleString("en-IN")}`}
+          value={`₹${formatAmount(totalEstimate)}`}
         />
       </div>
 
@@ -140,7 +150,7 @@ export default function Analytics() {
           <TabsContent value="due">
             <StatCard
               title="Total Amount Due"
-              value={`₹${totalDue.toLocaleString("en-IN")}`}
+              value={`₹${formatAmount(totalDue)}`}
               color="text-red-600"
             />
           </TabsContent>
@@ -148,7 +158,7 @@ export default function Analytics() {
           <TabsContent value="paid">
             <StatCard
               title="Total Paid Amount"
-              value={`₹${totalPaid.toLocaleString("en-IN")}`}
+              value={`₹${formatAmount(totalPaid)}`}
               color="text-green-600"
             />
           </TabsContent>
@@ -156,13 +166,13 @@ export default function Analytics() {
           <TabsContent value="estimate">
             <StatCard
               title="Total Estimate"
-              value={`₹${totalEstimate.toLocaleString("en-IN")}`}
+              value={`₹${formatAmount(totalEstimate)}`}
             />
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* ================= COMPANY BREAKDOWN ================= */}
+      {/* ================= COMPANY FILTER ================= */}
 
       <div className="flex items-center gap-3">
         <p className="font-medium">Company:</p>
@@ -179,25 +189,32 @@ export default function Analytics() {
         </select>
       </div>
 
+      {/* ================= COMPANY BREAKDOWN ================= */}
+
       <Card>
         <CardHeader>
           <CardTitle>{company}</CardTitle>
         </CardHeader>
 
         <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-4 gap-6">
             <StatCard title="Company Invoices" value={companyInvoices} />
 
             <StatCard
               title="Company Amount Due"
-              value={`₹${companyDue.toLocaleString("en-IN")}`}
+              value={`₹${formatAmount(companyDue)}`}
               color="text-red-600"
             />
 
             <StatCard
               title="Company Paid Amount"
-              value={`₹${companyPaid.toLocaleString("en-IN")}`}
+              value={`₹${formatAmount(companyPaid)}`}
               color="text-green-600"
+            />
+
+            <StatCard
+              title="Company Estimate"
+              value={`₹${formatAmount(companyEstimate)}`}
             />
           </div>
         </CardContent>
@@ -227,7 +244,7 @@ export default function Analytics() {
 
               <Tooltip
                 formatter={(value: number | undefined) => [
-                  `₹${(value || 0).toLocaleString("en-IN")}`,
+                  `₹${formatAmount(value || 0)}`,
                   "Amount",
                 ]}
               />
